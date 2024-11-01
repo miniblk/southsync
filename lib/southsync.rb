@@ -3,10 +3,9 @@
 require 'yaml'
 require 'fileutils'
 require_relative 'southsync/cli'
-require_relative 'southsync/organizer'
 
 # local_path = config['local_path']
-ROOT_DIR = File.expand_path('.')
+ROOT_DIR = File.expand_path('..', __dir__)
 CONFIG_FILE = File.join(ROOT_DIR, '/config/config.yml')
 
 module SouthSync
@@ -20,24 +19,36 @@ module SouthSync
         { normal: '▢ Watch random episodes?', highlight: "\e[4m▣ Watch random episodes\e[0m" },
         { normal: '▢ Watch by playlist?', highlight: "\e[4m▣ Watch by playlist\e[0m" }
       ]
+      @msg = ''
     end
 
     def run
-      generate_config if first_time?
+      print BANNER
 
-      puts load_config['show_location']
+      make_config if first_time?
+
+      scanning_folder
+      # since already a config, start to load it, check the directory
+      # is it legit? is it contains entries with certain video extensions?
     end
 
     private
 
     def first_time?
-      true unless File.exist?(CONFIG_FILE)
+      true unless File.exist?(CONFIG_FILE) && load_config['show_location']
     end
 
-    def generate_config
-      FileUtils.mkdir_p("#{ROOT_DIR}/config")
-      config = { 'show_location' => prompt('Enter show location...') }
+    def folder_path
+      ask('Enter folder location...')
+    end
 
+    def scanning_folder
+      puts 'scanning with spinner...'
+    end
+
+    def make_config
+      FileUtils.mkdir_p("#{ROOT_DIR}/config")
+      config = { 'show_location' => folder_path }
       config_file = File.open(CONFIG_FILE, 'w+')
       config_file.write(config.to_yaml)
     rescue IOError => e

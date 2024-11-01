@@ -6,15 +6,15 @@ module SouthSync
   # mixins
   module CLI
     BANNER = <<~BANNER
-         ▄    ▄▄▄     ▄
-        ▒▒▒  ▓▒▒▒▓  ▒▒▒▒▒  ▒▒▒▒
-        ███   ███   █████  ▒▓█▒
-      ┌┐▒▒▒   ▒▒▒   ▒▒▒▒▒  ▒▒▒▒
-      └─────────────────────────┐
+        ▄    ▄▄▄     ▄
+       ▒▒▒  ▓▒▒▒▓  ▒▒▒▒▒  ▒▒▒▒
+       ███   ███   █████  ▒▓█▒
+       ▒▒▒   ▒▒▒   ▒▒▒▒▒  ▒▒▒▒
+      ─────────────────────────
     BANNER
 
     def clear_screen
-      system('cls') || system('clear')
+      system('clear')
     end
 
     def clear_line
@@ -25,19 +25,28 @@ module SouthSync
       puts BANNER
     end
 
-    def prompt(question)
+    def exit_signal
+      clear_line
+      puts 'Exiting...'
+      exit!
+    end
+
+    def ask(question, answer = '')
       print "\e[2m#{question}\e[22m\e[1G"
 
-      key_pressed = $stdin.getch
-      clear_line
-      print key_pressed
+      loop do
+        key_pressed = $stdin.getch
 
-      answer = key_pressed + gets.chomp
-      answer unless answer.empty?
-    rescue Interrupt => e
-      puts "Exiting: #{e.message}"
-      puts e.backtrace.join("\n")
-      exit
+        case key_pressed
+        when "\u0003" then exit_signal
+        when "\u007F" then answer.chop! unless answer.empty?
+        when "\r" then return answer unless answer.empty?
+        else answer += key_pressed
+        end
+
+        clear_line
+        print answer
+      end
     end
   end
 end
