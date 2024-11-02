@@ -6,11 +6,10 @@ module SouthSync
   # mixins
   module CLI
     BANNER = <<~BANNER
-        ▄    ▄▄▄     ▄
-       ▒▒▒  ▓▒▒▒▓  ▒▒▒▒▒  ▒▒▒▒
-       ███   ███   █████  ▒▓█▒
-       ▒▒▒   ▒▒▒   ▒▒▒▒▒  ▒▒▒▒
-      ─────────────────────────
+       ▄    ▄▄▄     ▄
+      ▒▒▒  ▓▒▒▒▓  ▒▒▒▒▒  ▒▒▒▒
+      ███   ███   █████  ▒▓█▒
+      ▒▒▒   ▒▒▒   ▒▒▒▒▒  ▒▒▒▒
     BANNER
 
     def clear_screen
@@ -21,8 +20,21 @@ module SouthSync
       print "\r\e[K"
     end
 
+    def dimmed_text(str)
+      print "\e[2m> #{str}\e[22m\e[1G"
+    end
+
     def print_banner
+      # add color later || spinner || loading bar
       puts BANNER
+    end
+
+    def print_box(content = 'SouthSync', width = 25)
+      puts <<~BOX
+        ├#{'─' * width}╮
+        │  #{content + ' ' * (width - content.size - 2)}│
+        ╰#{'─' * width}╯
+      BOX
     end
 
     def exit_signal
@@ -31,21 +43,23 @@ module SouthSync
       exit!
     end
 
+    def ask_output(answer)
+      clear_line
+      dimmed_text 'TIMMAEH! 🖝--->  ' if answer.strip.empty?
+      print "> #{answer}"
+    end
+
     def ask(question, answer = '')
-      print "\e[2m#{question}\e[22m\e[1G"
+      dimmed_text question
 
       loop do
-        key_pressed = $stdin.getch
-
-        case key_pressed
+        case key_pressed = $stdin.getch
         when "\u0003" then exit_signal
-        when "\u007F" then answer.chop! unless answer.empty?
-        when "\r" then return answer unless answer.empty?
+        when "\u007F" then answer.chop! unless answer.strip.empty?
+        when "\r" then return answer unless answer.strip.empty?
         else answer += key_pressed
         end
-
-        clear_line
-        print answer
+        ask_output answer
       end
     end
   end

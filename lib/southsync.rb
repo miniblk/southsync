@@ -19,17 +19,12 @@ module SouthSync
         { normal: '▢ Watch random episodes?', highlight: "\e[4m▣ Watch random episodes\e[0m" },
         { normal: '▢ Watch by playlist?', highlight: "\e[4m▣ Watch by playlist\e[0m" }
       ]
-      @msg = ''
+      @msg = { success: 'kewl', error: 'lame' }
     end
 
-    def run
-      print BANNER
-
+    def setup
+      print_banner
       make_config if first_time?
-
-      scanning_folder
-      # since already a config, start to load it, check the directory
-      # is it legit? is it contains entries with certain video extensions?
     end
 
     private
@@ -39,7 +34,7 @@ module SouthSync
     end
 
     def folder_path
-      ask('Enter folder location...')
+      ask('Enter folder location...').strip
     end
 
     def scanning_folder
@@ -47,8 +42,8 @@ module SouthSync
     end
 
     def make_config
-      FileUtils.mkdir_p("#{ROOT_DIR}/config")
       config = { 'show_location' => folder_path }
+      FileUtils.mkdir_p("#{ROOT_DIR}/config")
       config_file = File.open(CONFIG_FILE, 'w+')
       config_file.write(config.to_yaml)
     rescue IOError => e
@@ -68,4 +63,4 @@ module SouthSync
 end
 
 app = SouthSync::App.new
-app.run
+app.setup
