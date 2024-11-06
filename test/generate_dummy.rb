@@ -41,7 +41,7 @@ module DummyGenerator
         encoder: %w[blutuht hif5 djabc],
         codec: %w[x265 x264],
         seperator: ['_', '-', ' ', '.'].sample,
-        extensions: ['.mkv', '.mp4', '.avi'].sample
+        extensions: ['.srt', '.mkv', '.mp4', '.avi'].sample
       }
     end
 

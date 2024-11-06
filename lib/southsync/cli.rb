@@ -6,10 +6,11 @@ module SouthSync
   # mixins
   module CLI
     BANNER = <<~BANNER
-       ▄    ▄▄▄     ▄
-      ▒▒▒  ▓▒▒▒▓  ▒▒▒▒▒  ▒▒▒▒
-      ███   ███   █████  ▒▓█▒
-      ▒▒▒   ▒▒▒   ▒▒▒▒▒  ▒▒▒▒
+         ▄    ▄▄▄     ▄
+        ▒▒▒  ▓▒▒▒▓  ▒▒▒▒▒  ▒▒▒▒
+        ███   ███   █████  ▒▓█▒
+        ▒▒▒   ▒▒▒   ▒▒▒▒▒  ▒▒▒▒
+      └─────────────────────────┐
     BANNER
 
     def clear_screen
@@ -25,13 +26,24 @@ module SouthSync
     end
 
     def print_banner
-      # add color later || spinner || loading bar
       puts BANNER
+    end
+
+    def loading_indicator(message = 'Checking')
+      ['🞕', '🞔', '🞖', '▣'].cycle do |dot|
+        clear_line
+        print "#{dot} #{message}..."
+        sleep rand(0.4..0.7)
+      end
+    rescue Interrupt => e
+      clear_line
+      puts "\rExiting... #{e.message}"
+      exit
     end
 
     def print_box(content = 'SouthSync', width = 25)
       puts <<~BOX
-        ├#{'─' * width}╮
+        ╭#{'─' * width}╮
         │  #{content + ' ' * (width - content.size - 2)}│
         ╰#{'─' * width}╯
       BOX
@@ -39,7 +51,7 @@ module SouthSync
 
     def exit_signal
       clear_line
-      puts 'Exiting...'
+      puts ['Exiting...', 'Oh my God, they killed Kenny!'].sample
       exit!
     end
 
