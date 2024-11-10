@@ -1,7 +1,5 @@
 # frozen_string_literal: true
 
-require 'io/console'
-
 module SouthSync
   # mixins
   module CLI
@@ -9,7 +7,7 @@ module SouthSync
          ▄    ▄▄▄     ▄
         ▒▒▒  ▓▒▒▒▓  ▒▒▒▒▒  ▒▒▒▒
         ███   ███   █████  ▒▓█▒
-        ▒▒▒   ▒▒▒   ▒▒▒▒▒  ▒▒▒▒
+      ┌┐▒▒▒   ▒▒▒   ▒▒▒▒▒  ▒▒▒▒
       └─────────────────────────┐
     BANNER
 
@@ -25,8 +23,43 @@ module SouthSync
       print "\e[2m> #{str}\e[22m\e[1G"
     end
 
+    def dimmed_bold_text(str)
+      print "\n\e[1m\e[2m #{str}\e[22m"
+    end
+
+    def print_help
+      dimmed_bold_text 'j/k: select ╍ enter: choose ╍ q/ctrl+c: quit'
+    end
+
     def print_banner
       puts BANNER
+    end
+
+    def highlight_entry(menu, cursor)
+      menu.each_with_index do |entry, i|
+        next if entry[:disabled]
+
+        puts cursor == i ? entry[:highlight] : entry[:normal]
+      end
+    end
+
+    def input_handler(input, cursor)
+      exit if ['q', "\u0003"].include?(input)
+
+      cursor += 1 if input == 'j'
+      cursor -= 1 if input == 'k'
+      cursor
+    end
+
+    def display(menu, cursor = 0)
+      loop do
+        clear_screen
+        print_banner
+        highlight_entry menu, cursor
+        print_help
+        cursor = input_handler($stdin.getch, cursor)
+        cursor %= menu.size
+      end
     end
 
     def loading_indicator(message = 'Checking')
@@ -52,7 +85,7 @@ module SouthSync
     def exit_signal
       clear_line
       puts ['Exiting...', 'Oh my God, they killed Kenny!'].sample
-      exit!
+      exit
     end
 
     def ask_output(answer)

@@ -30,16 +30,16 @@ module SouthSync
     def load_folder
       full_path = File.expand_path(load_config['show_location'])
       loading_thread = Thread.new { loading_indicator(load_config['show_location']) }
-      loading_thread.join(2)
+      loading_thread.join(1)
 
       print Dir.exist?(full_path) ? @msg[:success] : @msg[:fail]
       count_files(full_path)
+      Thread.abort_on_exception = true
 
       Thread.kill(loading_thread)
     rescue Errno::ENOENT => e
       puts "Error while loading files...\n#{e}"
-      # still need to handle this later...
-      puts "Please manualy change config at: \n#{CONFIG_FILE}"
+      # still need to handle this later... should i ensure to rm config.yml?
     end
 
     def make_config
