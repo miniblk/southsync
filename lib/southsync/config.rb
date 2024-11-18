@@ -6,11 +6,6 @@ module SouthSync
     ROOT_DIR = File.expand_path('../..', __dir__)
     CONFIG_FILE = File.join(ROOT_DIR, '/config/config.yml')
 
-    def debug
-      puts ROOT_DIR
-      puts Dir.home
-    end
-
     def first_time?
       true unless File.exist?(CONFIG_FILE) && load_config['show_location']
     end
@@ -34,9 +29,9 @@ module SouthSync
 
       print Dir.exist?(full_path) ? @msg[:success] : @msg[:fail]
       count_files(full_path)
-      Thread.abort_on_exception = true
 
       Thread.kill(loading_thread)
+      sleep 1
     rescue Errno::ENOENT => e
       puts "Error while loading files...\n#{e}"
       # still need to handle this later... should i ensure to rm config.yml?

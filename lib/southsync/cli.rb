@@ -1,15 +1,24 @@
 # frozen_string_literal: true
 
 module SouthSync
-  # mixins
+  # view stuff goes here
   module CLI
-    BANNER = <<~BANNER
-         ▄    ▄▄▄     ▄
-        ▒▒▒  ▓▒▒▒▓  ▒▒▒▒▒  ▒▒▒▒
-        ███   ███   █████  ▒▓█▒
-      ┌┐▒▒▒   ▒▒▒   ▒▒▒▒▒  ▒▒▒▒
-      └─────────────────────────┐
-    BANNER
+    def print_header(title, width = 80)
+      # title = remove_ansi title
+      puts <<~HEADER
+           ▄    ▄▄▄     ▄
+          ▒▒▒  ▓▒▒▒▓  ▒▒▒▒▒  ▒▒▒▒
+          ███   ███   █████  ▒▓█▒
+        ┌┐▒▒▒   ▒▒▒   ▒▒▒▒▒  ▒▒▒▒
+        ├#{'─' * width}┐
+        │ #{title + ' ' * (width - title.size - 2)} │
+        ├#{'─' * width}┘
+      HEADER
+    end
+
+    def remove_ansi(str)
+      str.gsub(/\e\[[0-9;]*m/, '').tr('▣', '').strip
+    end
 
     def clear_screen
       system('clear')
@@ -23,23 +32,34 @@ module SouthSync
       print "\e[2m> #{str}\e[22m\e[1G"
     end
 
+    def green_text(str)
+      print "\e[32m#{str}\e[0m"
+    end
+
     def dimmed_bold_text(str)
-      print "\n\e[1m\e[2m #{str}\e[22m"
+      puts "\e[1m\e[2m #{str}\e[22m"
     end
 
-    def print_help
-      dimmed_bold_text 'j/k: select ╍ enter: choose ╍ q/ctrl+c: quit'
+    def print_footer
+      puts '│'
+      puts '└┘'
+      dimmed_bold_text "\nj/k: select ╍ enter: choose ╍ q/ctrl+c: quit"
     end
 
-    def print_banner
-      puts BANNER
+    def print_box(content, width = 25)
+      puts <<~BOX
+        ├#{'─' * width}╮
+        │  #{content + ' ' * (width - content.size - 2)}│
+        ├#{'─' * width}╯
+      BOX
     end
 
     def highlight_entry(menu, cursor)
       menu.each_with_index do |entry, i|
-        next if entry[:disabled]
+        normal = "▢ #{entry[:text]}?"
+        highlight = "\e[4m▣ #{entry[:pattern] || entry[:text]}.\e[0m"
 
-        puts cursor == i ? entry[:highlight] : entry[:normal]
+        puts "│ #{cursor == i ? highlight : normal}"
       end
     end
 
@@ -51,14 +71,17 @@ module SouthSync
       cursor
     end
 
-    def display(menu, cursor = 0)
+    def display(menu, title, cursor = 0)
       loop do
         clear_screen
-        print_banner
+        print_header(title, 25)
         highlight_entry menu, cursor
-        print_help
-        cursor = input_handler($stdin.getch, cursor)
+        print_footer
+
+        input = $stdin.getch
+        cursor = input_handler(input, cursor)
         cursor %= menu.size
+        return cursor if input == "\r"
       end
     end
 
@@ -66,20 +89,12 @@ module SouthSync
       ['🞕', '🞔', '🞖', '▣'].cycle do |dot|
         clear_line
         print "#{dot} #{message}..."
-        sleep rand(0.4..0.7)
+        sleep rand(0.5..1)
       end
     rescue Interrupt => e
       clear_line
       puts "\rExiting... #{e.message}"
       exit
-    end
-
-    def print_box(content = 'SouthSync', width = 25)
-      puts <<~BOX
-        ╭#{'─' * width}╮
-        │  #{content + ' ' * (width - content.size - 2)}│
-        ╰#{'─' * width}╯
-      BOX
     end
 
     def exit_signal

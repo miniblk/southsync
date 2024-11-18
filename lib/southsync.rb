@@ -5,6 +5,7 @@ require 'yaml'
 require 'fileutils'
 require_relative 'southsync/cli'
 require_relative 'southsync/config'
+require_relative 'southsync/organize'
 
 module SouthSync
   # Entry
@@ -14,28 +15,30 @@ module SouthSync
 
     def initialize
       @menu = [
-        { normal: ' ▢ Organize episodes?', highlight: " \e[4m▣ Organize episodes.\e[0m", command: 'Organizer',
-          disabled: false },
-        { normal: ' ▢ Watch random episodes?', highlight: " \e[4m▣ Watch random episodes.\e[0m", command: 'Random',
-          disabled: false },
-        { normal: ' ▢ Watch by playlist?', highlight: " \e[4m▣ Watch by playlist.\e[0m", command: 'Playlist',
-          disabled: false }
+        { text: 'Organize episodes', command: Organizer },
+        { text: 'Watch random episodes', command: 'Random' },
+        { text: 'Watch by playlist', command: 'Playlist' },
+        { text: 'Search Quotes', command: 'Quotes' }
       ]
       @msg = { success: "kewl!\n", fail: "lame!\n" }
+      @header_title = 'SouthSync'
     end
 
     def setup
-      print_banner
       make_config if first_time?
       load_folder
     end
 
+    def swap_menu(command)
+      cmd = @menu[command][:command].new(@menu[command][:text])
+      cmd.run
+    end
+
     def run
       setup
-      display(@menu)
+      command_class = display(@menu, @header_title)
+
+      swap_menu(command_class)
     end
   end
 end
-
-app = SouthSync::App.new
-app.run
