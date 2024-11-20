@@ -4,7 +4,6 @@ module SouthSync
   # view stuff goes here
   module CLI
     def print_header(title, width = 80)
-      # title = remove_ansi title
       puts <<~HEADER
            ▄    ▄▄▄     ▄
           ▒▒▒  ▓▒▒▒▓  ▒▒▒▒▒  ▒▒▒▒
@@ -40,10 +39,10 @@ module SouthSync
       puts "\e[1m\e[2m #{str}\e[22m"
     end
 
-    def print_footer
+    def print_footer(print_help: true)
       puts '│'
       puts '└┘'
-      dimmed_bold_text "\nj/k: select ╍ enter: choose ╍ q/ctrl+c: quit"
+      print_help ? dimmed_bold_text("\nj/k: select ╍ enter: choose ╍ q/ctrl+c: quit") : ''
     end
 
     def print_box(content, width = 25)
@@ -69,6 +68,12 @@ module SouthSync
       cursor += 1 if input == 'j'
       cursor -= 1 if input == 'k'
       cursor
+    end
+
+    def display_tree(dirpath)
+      clear_screen
+      command = "tree #{dirpath}"
+      system(command)
     end
 
     def display(menu, title, cursor = 0)

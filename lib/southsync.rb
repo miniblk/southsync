@@ -1,11 +1,14 @@
 # frozen_string_literal: true
 
 require 'io/console'
+require 'nokogiri'
+require 'open-uri'
 require 'yaml'
 require 'fileutils'
 require_relative 'southsync/cli'
 require_relative 'southsync/config'
 require_relative 'southsync/organize'
+require_relative 'southsync/scraper'
 
 module SouthSync
   # Entry
@@ -39,6 +42,11 @@ module SouthSync
       command_class = display(@menu, @header_title)
 
       swap_menu(command_class)
+
+      at_exit do
+        print_header('Done!', 25)
+        print_footer(print_help: false)
+      end
     end
   end
 end

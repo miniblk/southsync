@@ -25,7 +25,7 @@ module SouthSync
     def load_folder
       full_path = File.expand_path(load_config['show_location'])
       loading_thread = Thread.new { loading_indicator(load_config['show_location']) }
-      loading_thread.join(1)
+      loading_thread.join(2)
 
       print Dir.exist?(full_path) ? @msg[:success] : @msg[:fail]
       count_files(full_path)
