@@ -8,7 +8,7 @@ require 'fileutils'
 require_relative 'southsync/config'
 require_relative 'southsync/cli'
 require_relative 'southsync/utilities'
-require_relative 'southsync/organizer'
+require_relative 'southsync/organize'
 require_relative 'southsync/scraper'
 
 module SouthSync
