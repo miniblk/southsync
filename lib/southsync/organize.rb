@@ -3,60 +3,88 @@
 module SouthSync
   # Organize stuff goes here
   class Organizer
-    include CLI
-    include Config
+    attr_reader :menu, :main_app
 
-    def initialize(title)
-      @header_title = title
-      @base_dir = load_config['show_location']
+    include CLI
+    include Utilities
+
+    def initialize(main_app)
       @menu = [
-        { text: 'S08E5(Awesom-O).mkv', pattern: 'S[season-number]E[episode-number]([episode-title])' },
         { text: 'Episode-5.mkv', pattern: 'Episode-[episode-number]' },
+        { text: 'S08E5(Awesom-O).mkv', pattern: 'S[season-number]E[episode-number]([episode-title])' },
         { text: 'S08E05.mkv', pattern: 'S[season-number]E[episode-number]' },
         { text: 'Episode-5(Awesom-O).mkv', pattern: 'Episode-[episode-number]([episode-title])' },
-        { text: 'Custom Pattern', pattern: 'Custom Pattern' }
+        { text: 'Custom Pattern', pattern: 'custom' }
       ]
-      @data = {}
+      @main_app = main_app
     end
 
     def run
-      selected = display(@menu, @header_title)
-      season_folders = list_files.group_by { |file| extract_number[:season].call(file) }
-      organize_it!(season_folders, @menu[selected][:pattern])
+      @selected = Display.menu(menu: menu, header: self.class.name) unless valid_files.empty?
+      main_app.run if @selected.nil? # return to main menu
+
+      pattern = @selected[:pattern]
+      pattern = Input.ask('Enter your custom pattern...', :pattern).strip if pattern == 'custom'
+      proceed?(pattern) ? organize(pattern) : run
     end
 
-    def list_files
-      extensions = ['.mkv', '.mp4', '.avi']
-      files = Dir.entries(@base_dir) - ['.', '..']
-      files.select { |file| extensions.include?(File.extname(file)) }
+    private
+
+    def proceed?(pattern)
+      options = { header: __method__.to_s, footer: :preview }
+
+      first_file = valid_files.first
+      first_file.fetch(:data)[:pattern] = pattern
+
+      old_file = first_file.fetch(:filename)
+      new_file = replace(first_file[:data])
+      data = { pattern: pattern, lines: [old_file, new_file] }
+
+      Display.preview(**data, **options) if new_file
     end
 
-    def extract_number
-      {
-        episode: ->(str) { str.match(/(?:episode|e|ep)[\s_-]?(\d{1,2})/i)[1] },
-        season: ->(str) { str.match(/(?:season|s)[\s_-]?(\d{1,2})/i)[1] }
-      }
+    def organize(pattern)
+      msg = pattern.include?('episode-title') ? "Fetching data... it'll take a while" : 'Running...'
+      Display.render_content do
+        Display.box(msg, msg.length + 2)
+        process_season(pattern)
+      end
+    rescue StandardError => e
+      Text.dimmed_yellow e
+    ensure
+      Text.green "\nPress any key to go back..."
+      main_app.run if Input.capture_input
     end
 
-    def replace_by(pattern, file_data = {})
-      replacements = {
-        '[season-number]' => file_data[:season].rjust(2, '0'),
-        '[episode-number]' => file_data[:episode].rjust(2, '0'),
-        '[episode-title]' => FetchTitle.new(file_data).crawl
-      }
-      pattern.gsub(/\[.*?\]/, replacements)
-    end
-
-    def organize_it!(folders, pattern)
-      folders.each do |season, episodes|
-        path = "#{@base_dir}/Season #{season}"
+    def process_season(pattern)
+      group_files_by_season.each do |season, episodes|
+        path = "#{base_dir}/Season #{season}"
         FileUtils.mkdir_p(path)
-        episodes.each do |ep|
-          episode = extract_number[:episode].call(ep)
-          new_filename = replace_by(pattern, { episode: episode, season: season }) + File.extname(ep)
-          FileUtils.mv "#{@base_dir}/#{ep}", "#{path}/#{new_filename}"
-          display_tree(@base_dir)
-        end
+        new_filenames = bulk_rename(episodes, path, pattern)
+        Display.tree(dir: season, files: new_filenames)
+      end
+      Display.box('Done!', 7)
+    end
+
+    def duplication?(file)
+      return unless File.exist?(file)
+
+      Text.dimmed_yellow "┠ Skipping: File '#{file}' already exists."
+      true
+    end
+
+    def bulk_rename(files, path, pattern)
+      files.map do |file|
+        data = file.fetch(:data)
+        data[:pattern] = pattern
+        new_filename = replace(data)
+
+        target_path = "#{path}/#{new_filename}"
+        next if duplication?(target_path)
+
+        FileUtils.mv "#{base_dir}/#{file[:filename]}", target_path
+
+        new_filename
       end
     end
   end
