@@ -1,130 +1,191 @@
 # frozen_string_literal: true
 
 module SouthSync
-  # view stuff goes here
+  # AAAAAAAAASDaskjdklasjld
   module CLI
-    def print_header(title, width = 80)
-      puts <<~HEADER
-           ▄    ▄▄▄     ▄
-          ▒▒▒  ▓▒▒▒▓  ▒▒▒▒▒  ▒▒▒▒
-          ███   ███   █████  ▒▓█▒
-        ┌┐▒▒▒   ▒▒▒   ▒▒▒▒▒  ▒▒▒▒
-        ├#{'─' * width}┐
-        │ #{title + ' ' * (width - title.size - 2)} │
-        ├#{'─' * width}┘
-      HEADER
-    end
+    CTRL_C = "\u0003"
+    BACKSPACE = "\u007F"
 
-    def remove_ansi(str)
-      str.gsub(/\e\[[0-9;]*m/, '').tr('▣', '').strip
-    end
+    DISPLAY_HELP = {
+      menu: 'j/k: move up/down ╍ enter: choose ╍ q/ctrl+c: quit ╍ Backspace: back',
+      pattern: '[show-title] ╏ [season-number] ╏ [episode-number] ╏ [episode-title]',
+      preview: 'enter: to proceed next ╍ b: back ╍ q/ctrl+c: quit'
+    }.freeze
 
-    def clear_screen
-      system('clear')
-    end
+    LOGO = <<~LOGO.chomp
+         ▄    ▄▄▄     ▄
+        ▒▒▒  ▓▒▒▒▓  ▒▒▒▒▒  ▒▒▒▒
+        ███   ███   █████  ▒▓█▒
+      ┌┐▒▒▒   ▒▒▒   ▒▒▒▒▒  ▒▒▒▒
+    LOGO
 
-    def clear_line
-      print "\r\e[K"
-    end
+    SQUARES = ['🞕', '🞔', '▢', '▣'].cycle
 
-    def dimmed_text(str)
-      print "\e[2m> #{str}\e[22m\e[1G"
-    end
+    # Input stuff
+    module Input
+      module_function
 
-    def green_text(str)
-      print "\e[32m#{str}\e[0m"
-    end
-
-    def dimmed_bold_text(str)
-      puts "\e[1m\e[2m #{str}\e[22m"
-    end
-
-    def print_footer(print_help: true)
-      puts '│'
-      puts '└┘'
-      print_help ? dimmed_bold_text("\nj/k: select ╍ enter: choose ╍ q/ctrl+c: quit") : ''
-    end
-
-    def print_box(content, width = 25)
-      puts <<~BOX
-        ├#{'─' * width}╮
-        │  #{content + ' ' * (width - content.size - 2)}│
-        ├#{'─' * width}╯
-      BOX
-    end
-
-    def highlight_entry(menu, cursor)
-      menu.each_with_index do |entry, i|
-        normal = "▢ #{entry[:text]}?"
-        highlight = "\e[4m▣ #{entry[:pattern] || entry[:text]}.\e[0m"
-
-        puts "│ #{cursor == i ? highlight : normal}"
-      end
-    end
-
-    def input_handler(input, cursor)
-      exit if ['q', "\u0003"].include?(input)
-
-      cursor += 1 if input == 'j'
-      cursor -= 1 if input == 'k'
-      cursor
-    end
-
-    def display_tree(dirpath)
-      clear_screen
-      command = "tree #{dirpath}"
-      system(command)
-    end
-
-    def display(menu, title, cursor = 0)
-      loop do
-        clear_screen
-        print_header(title, 25)
-        highlight_entry menu, cursor
-        print_footer
-
+      def capture_input
         input = $stdin.getch
-        cursor = input_handler(input, cursor)
-        cursor %= menu.size
-        return cursor if input == "\r"
+        send_exit_msg if ['q', CTRL_C].include?(input)
+
+        input
       end
-    end
 
-    def loading_indicator(message = 'Checking')
-      ['🞕', '🞔', '🞖', '▣'].cycle do |dot|
-        clear_line
-        print "#{dot} #{message}..."
-        sleep rand(0.5..1)
+      def send_exit_msg
+        Text.clear_line
+        puts "Exiting... \e[5m#{['Lame!', '☠'].sample}\e[25m"
+        exit
       end
-    rescue Interrupt => e
-      clear_line
-      puts "\rExiting... #{e.message}"
-      exit
-    end
 
-    def exit_signal
-      clear_line
-      puts ['Exiting...', 'Oh my God, they killed Kenny!'].sample
-      exit
-    end
+      # == Custom get inputs ==
+      def ask_output(answer)
+        Text.clear_line
+        prefix = '│ >'
+        Text.dimmed "#{prefix} TIMMAEH! ->  " if answer.strip.empty?
+        puts "#{prefix} #{answer}"
+      end
 
-    def ask_output(answer)
-      clear_line
-      dimmed_text 'TIMMAEH! 🖝--->  ' if answer.strip.empty?
-      print "> #{answer}"
-    end
-
-    def ask(question, answer = '')
-      dimmed_text question
-
-      loop do
-        case key_pressed = $stdin.getch
-        when "\u0003" then exit_signal
-        when "\u007F" then answer.chop! unless answer.strip.empty?
-        when "\r" then return answer unless answer.strip.empty?
-        else answer += key_pressed
+      def ask(question, opts = {})
+        answer = ''
+        loop do
+          Display.render_content(header: question, footer: opts) { ask_output answer }
+          case key_pressed = capture_input
+          when BACKSPACE then answer.chop! unless answer.strip.empty?
+          when "\r" then return answer unless answer.strip.empty?
+          else answer += key_pressed
+          end
         end
-        ask_output answer
+      end
+    end
+
+    # Utilities
+    module Text
+      module_function
+
+      def clear_line
+        print "\r\e[K"
+      end
+
+      def dimmed(str, bold: false)
+        style = bold ? "\e[1m\e[2m" : "\e[2m"
+        print "#{style}#{str}\e[0m\e[1G"
+      end
+
+      def green(str, bold: false)
+        style = bold ? "\e[1;32m" : "\e[32m"
+        puts "#{style}#{str}\e[0m"
+      end
+
+      def dimmed_yellow(str, bold: false)
+        style = bold ? "\e[1;33m" : "\e[2;33m"
+        puts "#{style}#{str}\e[0m"
+      end
+    end
+
+    # UI stuff
+    module Display
+      module_function
+
+      def clear_screen
+        system('clear') || system('cls') || IO.console.clear_screen
+      end
+
+      def spin(files_range)
+        print "#{files_range.first} video files / #{files_range.last} files" if files_range.first.zero?
+
+        num = 0
+        until num.between?(*files_range)
+          num += 1
+          print "\r\e[K#{SQUARES.next} #{num} video files / #{files_range.last} files"
+          sleep rand(0.01..0.07)
+        end
+      rescue Interrupt => e
+        puts e
+        Input.send_exit_msg
+      end
+
+      # == Template ==
+      def print_header(title, width = 40)
+        title ||= 'SouthSync'
+        puts <<~HEADER
+          #{LOGO}
+          ├#{'─' * width}┐
+          │ #{title + ' ' * (width - title.length - 2)} │
+          ├#{'─' * width}┘
+        HEADER
+      end
+
+      def render_content(header: nil, footer: nil)
+        clear_screen
+        print_header(header)
+        yield if block_given?
+        print_footer(footer)
+      end
+
+      def print_footer(type)
+        puts '│'
+        puts "└┘\n\n"
+        Text.dimmed(DISPLAY_HELP.fetch(type) { DISPLAY_HELP[:menu] }, bold: true)
+      end
+
+      # == Menu ==
+      def update_cursor(input, cursor)
+        cursor += 1 if input == 'j'
+        cursor -= 1 if input == 'k'
+        cursor
+      end
+
+      def highlight_entry(menu, cursor)
+        menu.each_with_index do |entry, i|
+          normal = "▢ #{entry[:text]}?"
+          highlight = "\e[4m▣ #{entry[:pattern] || entry[:text]}\e[0m"
+
+          puts "│ #{cursor == i ? highlight : normal}"
+        end
+      end
+
+      def menu(menu:, **opts)
+        cursor = 0
+        loop do
+          render_content(**opts) { highlight_entry menu, cursor }
+
+          input = Input.capture_input
+          cursor = update_cursor(input, cursor)
+          cursor %= menu.size
+          return nil if input == BACKSPACE
+          return menu[cursor] if input == "\r"
+        end
+      end
+
+      def box(str, width = 16)
+        puts <<~BOX
+          │┌#{'─' * width}╮
+          ├┤ #{str + ' ' * (width - str.length - 2)} │
+          │└#{'─' * width}╯
+        BOX
+      end
+
+      def preview(pattern:, lines:, **opts)
+        loop do
+          render_content(**opts) do
+            box(pattern, pattern.length + 2)
+            Text.dimmed "│  #{lines.first}\n"
+            Text.green("┠  #{lines.last}", bold: true)
+          end
+          input = Input.capture_input
+
+          return true if ["\r"].include?(input)
+          return false if input == BACKSPACE
+        end
+      end
+
+      def tree(dir:, files:)
+        puts "│  Season #{dir}"
+        files.each do |file|
+          puts "│ ┝ #{file}"
+          sleep rand(0.01..1)
+        end
       end
     end
   end
