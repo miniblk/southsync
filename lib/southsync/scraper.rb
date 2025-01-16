@@ -17,6 +17,9 @@ module SouthSync
 
     def load_page(url)
       Nokogiri::HTML(URI.parse(url).open.read)
+    rescue StandardError => e
+      errors << "Failed to load page: #{e.message}"
+      nil
     end
 
     def crawl
@@ -31,30 +34,48 @@ module SouthSync
   # Crawl episode-title from wikipedia
   class FetchTitle < Scraper
     def crawl
-      @output = episode_data_from_wiki
+      page = load_page(WIKI_URL)
+      return unless page
+
+      @output ||= episode_data_from_wiki(page)
     rescue StandardError => e
-      errors << e
+      errors << "Error: #{e.message}"
+      nil
     end
 
     private
 
-    def episode_data_from_wiki
-      data = nil
-      episode_tables = load_page(WIKI_URL).css('table.wikiepisodetable')
-      episode_tables.each do |table|
-        next if table.previous_element.at('a').nil?
+    def episode_data_from_wiki(page)
+      episode_tables = page.css('table.wikiepisodetable')
 
-        season = table.previous_element.at('a').text.delete_prefix('South Park season ')
-        data = parse_tables(table) if season.eql? @input[:season]
+      return if @input[:season].to_i > episode_tables.count
+
+      episode_tables.each do |table|
+        season = extract_season(table)
+        next unless season.eql? @input[:season]
+
+        return parse_tables(table)
       end
-      data
+    end
+
+    def extract_season(table)
+      link = table.previous_element.at('a')
+      link&.text&.delete_prefix('South Park season ')
+    end
+
+    def extract_episode(columns)
+      number = columns[0].text.strip
+      title = columns[1].at('a').text.tr('\"', '')
+      [number, title]
     end
 
     def parse_tables(table)
-      table.css('tr')[1..].each do |row|
+      rows = table.css('tr')[1..]
+      return if @input[:episode].to_i > rows.count
+
+      rows.each do |row|
         columns = row.css('td, th')[1..2]
-        episode_number = columns[0].text
-        episode_title = columns[1].text.tr('\"', '')
+        episode_number, episode_title = extract_episode(columns)
         return episode_title if episode_number.eql? @input[:episode]
       end
     end
