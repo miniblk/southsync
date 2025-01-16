@@ -5,14 +5,17 @@ require 'nokogiri'
 require 'open-uri'
 require 'yaml'
 require 'fileutils'
-require_relative 'southsync/cli'
 require_relative 'southsync/config'
-require_relative 'southsync/organize'
+require_relative 'southsync/cli'
+require_relative 'southsync/utilities'
+require_relative 'southsync/organizer'
 require_relative 'southsync/scraper'
 
 module SouthSync
-  # Entry
+  # Run Main Menu
   class App
+    attr_reader :menu
+
     include CLI
     include Config
 
@@ -23,30 +26,25 @@ module SouthSync
         { text: 'Watch by playlist', command: 'Playlist' },
         { text: 'Search Quotes', command: 'Quotes' }
       ]
-      @msg = { success: "kewl!\n", fail: "lame!\n" }
-      @header_title = 'SouthSync'
-    end
-
-    def setup
-      make_config if first_time?
-      load_folder
-    end
-
-    def swap_menu(command)
-      cmd = @menu[command][:command].new(@menu[command][:text])
-      cmd.run
     end
 
     def run
-      setup
-      command_class = display(@menu, @header_title)
+      start_up
+      selected_entry = Display.menu(menu: menu)
+      exit unless selected_entry
 
-      swap_menu(command_class)
+      go_to(selected_entry)
+    end
 
-      at_exit do
-        print_header('Done!', 25)
-        print_footer(print_help: false)
-      end
+    private
+
+    def start_up
+      first_time? ? make_config : valid_folder?
+    end
+
+    def go_to(entry)
+      cmd = entry.fetch(:command)
+      cmd.new(self).run
     end
   end
 end
