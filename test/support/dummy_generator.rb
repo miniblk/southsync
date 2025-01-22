@@ -59,5 +59,3 @@ module DummyFiles
     valid_files.each { |file| FileUtils.rm(File.join(TMP_DIR, file)) }
   end
 end
-
-DummyFiles.generate_files(num_files: 30)
