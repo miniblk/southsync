@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 module SouthSync
-  # AAAAAAAAASDaskjdklasjld
+  # Views
   module CLI
     CTRL_C = "\u0003"
     BACKSPACE = "\u007F"
@@ -9,7 +9,8 @@ module SouthSync
     DISPLAY_HELP = {
       menu: 'j/k: move up/down ╍ enter: choose ╍ q/ctrl+c: quit ╍ Backspace: back',
       pattern: '[show-title] ╏ [season-number] ╏ [episode-number] ╏ [episode-title]',
-      preview: 'enter: to proceed next ╍ b: back ╍ q/ctrl+c: quit'
+      preview: 'enter: to proceed next ╍ b: back ╍ q/ctrl+c: quit',
+      any: 'press any key to go back...'
     }.freeze
 
     LOGO = <<~LOGO.chomp
@@ -41,20 +42,20 @@ module SouthSync
       # == Custom get inputs ==
       def ask_output(answer)
         Text.clear_line
-        prefix = '│ >'
-        Text.dimmed "#{prefix} TIMMAEH! ->  " if answer.strip.empty?
-        puts "#{prefix} #{answer}"
+        Text.dimmed '> TIMMAEH! ->  ' if answer.strip.empty?
+        print "> #{answer}"
       end
 
-      def ask(question, opts = {})
+      def ask(question)
         answer = ''
+        Text.dimmed question
         loop do
-          Display.render_content(header: question, footer: opts) { ask_output answer }
           case key_pressed = capture_input
           when BACKSPACE then answer.chop! unless answer.strip.empty?
           when "\r" then return answer unless answer.strip.empty?
           else answer += key_pressed
           end
+          ask_output answer
         end
       end
     end
@@ -80,6 +81,11 @@ module SouthSync
       def dimmed_yellow(str, bold: false)
         style = bold ? "\e[1;33m" : "\e[2;33m"
         puts "#{style}#{str}\e[0m"
+      end
+
+      def red(str, bold: false)
+        style = bold ? "\e[1;91m" : "\e[91m"
+        puts "#{style}#{str}\e[39m"
       end
     end
 
@@ -168,7 +174,7 @@ module SouthSync
 
       def preview(pattern:, lines:, **opts)
         loop do
-          render_content(**opts) do
+          render_content(**opts, footer: :preview) do
             box(pattern, pattern.length + 2)
             Text.dimmed "│  #{lines.first}\n"
             Text.green("┠  #{lines.last}", bold: true)
@@ -185,6 +191,17 @@ module SouthSync
         files.each do |file|
           puts "│ ┝ #{file}"
           sleep rand(0.01..1)
+        end
+      end
+
+      def error(msg, header)
+        str = "#{header[0..33]}..."
+        from = msg.index '[!] ['
+        loop do
+          render_content(header: str, footer: :any) { Text.red "┠ #{msg[from...]}" }
+
+          input = Input.capture_input
+          return false if input
         end
       end
     end
