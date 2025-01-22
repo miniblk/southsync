@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 require 'io/console'
-require 'nokogiri'
+require 'nokolexbor'
 require 'open-uri'
 require 'yaml'
 require 'fileutils'
