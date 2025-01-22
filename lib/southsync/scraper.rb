@@ -16,10 +16,9 @@ module SouthSync
     end
 
     def load_page(url)
-      Nokogiri::HTML(URI.parse(url).open.read)
+      Nokolexbor::HTML(URI.parse(url).open.read)
     rescue StandardError => e
-      errors << "Failed to load page: #{e.message}"
-      nil
+      errors << "(•̆_•̆)?: #{e.message}"
     end
 
     def crawl
@@ -35,48 +34,34 @@ module SouthSync
   class FetchTitle < Scraper
     def crawl
       page = load_page(WIKI_URL)
-      return unless page
+      tables = page.css('table.wikiepisodetable')
+      return if @input[:season] > 26
 
-      @output ||= episode_data_from_wiki(page)
+      season_table = find_season_table(tables)
+      @output = find_episode_title(season_table)
     rescue StandardError => e
-      errors << "Error: #{e.message}"
+      errors << "(╯°□°)╯︵ ┻━┻: #{e.message}"
       nil
     end
 
     private
 
-    def episode_data_from_wiki(page)
-      episode_tables = page.css('table.wikiepisodetable')
-
-      return if @input[:season].to_i > episode_tables.count
-
-      episode_tables.each do |table|
-        season = extract_season(table)
-        next unless season.eql? @input[:season]
-
-        return parse_tables(table)
+    def find_episode_title(table)
+      rows = table.css('tr')[1..]
+      rows.select do |row|
+        columns = row.css('td, th')[1..2]
+        ep_number = columns[0].text.strip
+        ep_title = columns[1].at('a').text.tr('\"', '')
+        return ep_title if ep_number == @input[:episode].to_s
       end
     end
 
-    def extract_season(table)
-      link = table.previous_element.at('a')
-      link&.text&.delete_prefix('South Park season ')
-    end
+    def find_season_table(tables)
+      tables.select do |table|
+        season_link = table.xpath('preceding::a[1]')
+        season_number = season_link&.text&.delete_prefix('South Park season ')
 
-    def extract_episode(columns)
-      number = columns[0].text.strip
-      title = columns[1].at('a').text.tr('\"', '')
-      [number, title]
-    end
-
-    def parse_tables(table)
-      rows = table.css('tr')[1..]
-      return if @input[:episode].to_i > rows.count
-
-      rows.each do |row|
-        columns = row.css('td, th')[1..2]
-        episode_number, episode_title = extract_episode(columns)
-        return episode_title if episode_number.eql? @input[:episode]
+        return table if input[:season].to_s == season_number
       end
     end
   end
