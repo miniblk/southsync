@@ -33,7 +33,7 @@ class TestUtilities < Minitest::Test
     file[:data][:pattern] = 'Season[season-number]-Episode-[episode-number]-[episode-title]'
     result = replace(file[:data])
 
-    assert_nil result, 'Expected a nil result'
+    assert_equal result, 'Season08-Episode-55-[].avi'
   end
 
   def test_replace_episode_title_for_a_non_exist_season
@@ -52,6 +52,15 @@ class TestUtilities < Minitest::Test
       file[:data][:pattern] = '[show-title] - Episode-[episode-number]'
       replace(file[:data])
     end
+  end
+
+  def test_replace_with_episode_title_and_file_name_with_a_leading_zero
+    filename = 'South.Park.S07e08.South.Park.Is.Gay [1080][Av1](viperpray).mkv'
+    file = fetch_data(filename)
+    file[:data][:pattern] = '[show-title] - S[season-number]E[episode-number]([episode-title])'
+    result = replace(file[:data])
+
+    assert_equal 'South Park - S07E08(South Park Is Gay).mkv', result
   end
 
   def test_replace_by_pattern_with_episode_title
@@ -79,6 +88,20 @@ class TestUtilities < Minitest::Test
   def test_valid_files_with_no_valid_extensions
     DummyFiles.remove_valid_files
     assert_empty valid_files, 'Expected empty if there are no valid files'
+  end
+
+  def test_fetch_data
+    filename = "South.Park.Bebe's.Boobs.Destroy.Society [1080][Av1].mkv"
+    result = fetch_data(filename)
+
+    assert_nil result, 'Expected fetch_data result to be nil'
+  end
+
+  def test_fetch_data_is_returns_a_hash
+    filename = 'South.Park.S07e08.South.Park.Is.Gay [1080][Av1](viperpray).mkv'
+    result = fetch_data(filename)
+
+    assert_kind_of Hash, result
   end
 
   def test_extract_number
