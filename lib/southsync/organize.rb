@@ -25,34 +25,32 @@ module SouthSync
 
       pattern = @selected[:pattern]
       pattern = Input.ask('Enter your custom pattern...', :pattern).strip if pattern == 'custom'
-      proceed?(pattern) ? organize(pattern) : run
+      proceed?(pattern) ? organize(pattern) : @selected = nil || run
     end
 
     private
 
     def proceed?(pattern)
-      options = { header: __method__.to_s, footer: :preview }
-
       first_file = valid_files.first
       first_file.fetch(:data)[:pattern] = pattern
 
       old_file = first_file.fetch(:filename)
-      new_file = replace(first_file[:data])
-      data = { pattern: pattern, lines: [old_file, new_file] }
+      result = replace(first_file[:data])
+      return Display.error(result, old_file) if result.include?('[!]')
 
-      Display.preview(**data, **options) if new_file
+      data = { pattern: pattern, lines: [old_file, result] }
+      Display.preview(**data, header: __method__.to_s)
     end
 
     def organize(pattern)
       msg = pattern.include?('episode-title') ? "Fetching data... it'll take a while" : 'Running...'
-      Display.render_content do
+      Display.render_content(footer: :any) do
         Display.box(msg, msg.length + 2)
         process_season(pattern)
       end
     rescue StandardError => e
       Text.dimmed_yellow e
     ensure
-      Text.green "\nPress any key to go back..."
       main_app.run if Input.capture_input
     end
 
