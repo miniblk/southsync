@@ -14,21 +14,24 @@ module SouthSync
 
     def replace(file_data = {})
       replacements = {
-        '[season-number]' => file_data[:season].rjust(2, '0'),
-        '[episode-number]' => file_data[:episode].rjust(2, '0'),
+        '[season-number]' => file_data[:season].to_s.rjust(2, '0'),
+        '[episode-number]' => file_data[:episode].to_s.rjust(2, '0'),
         '[show-title]' => 'South Park'
       }
       replacements['[episode-title]'] = fetch_title(file_data) if file_data[:pattern].include?('episode-title')
-      return nil if replacements.values.any?(&:nil?)
+      return if replacements.values.any?(&:nil?)
 
       "#{file_data[:pattern].gsub(/\[.*?\]/, replacements)}#{file_data[:extension]}"
     end
 
     def fetch_title(data)
-      fetcher = FetchTitle.new(data)
-      fetcher.crawl
+      episode_title = FetchTitle.new(data)
+      episode_title.crawl
+      error_msg = "[!] #{episode_title.errors}"
 
-      fetcher.output unless fetcher.errors?
+      return error_msg if episode_title.errors?
+
+      episode_title.output
     end
 
     def valid_files
@@ -43,11 +46,11 @@ module SouthSync
 
     def fetch_data(file)
       data = {
-        season: extract_number[:season].call(file),
-        episode: extract_number[:episode].call(file),
+        season: extract_number[:season].call(file).to_i,
+        episode: extract_number[:episode].call(file).to_i,
         extension: File.extname(file)
       }
-      return if data.values.any?(&:nil?)
+      return if data[:season].zero? || data[:episode].zero?
 
       { filename: file, data: data }
     end
