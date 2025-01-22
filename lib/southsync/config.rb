@@ -43,7 +43,7 @@ module SouthSync
       sleep 1
       true
     rescue Interrupt, Errno::ENOENT, Errno::ENOTDIR => e
-      puts "\n[Lame!] Error while loading files...\n#{e}"
+      puts "\n[!] Error while loading files...\n#{e}"
       false
     end
 
@@ -55,7 +55,7 @@ module SouthSync
       video_files = files.select { |entry| EXTENSIONS.include?(File.extname(entry)) }
       [video_files, files]
     rescue Errno::ENOENT => e
-      puts "[!] #{e.message}"
+      puts "\n[!] #{e.message}"
       exit
     end
   end
